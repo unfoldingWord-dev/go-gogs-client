@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // Permission represents a API permission.
@@ -23,11 +24,18 @@ type Repository struct {
 	ID          int64      `json:"id"`
 	Owner       *User      `json:"owner"`
 	FullName    string     `json:"full_name"`
+	Description string     `json:"description"`
 	Private     bool       `json:"private"`
 	Fork        bool       `json:"fork"`
 	HtmlUrl     string     `json:"html_url"`
 	CloneUrl    string     `json:"clone_url"`
 	SshUrl      string     `json:"ssh_url"`
+	Stars       int        `json:"stars_count"`
+	Forks       int        `json:"forks_count"`
+	Watchers    int        `json:"watchers_count"`
+	OpenIssues  int        `json:"open_issues_count"`
+	Created     time.Time  `json:"created_at"`
+	Updated     time.Time  `json:"updated_at"`
 	Permissions Permission `json:"permissions"`
 }
 
