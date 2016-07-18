@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
 )
 
 type CreateUserOption struct {
@@ -27,8 +26,7 @@ func (c *Client) AdminCreateUser(opt CreateUserOption) (*User, error) {
 		return nil, err
 	}
 	user := new(User)
-	return user, c.getParsedResponse("POST", "/admin/users",
-		http.Header{"content-type": []string{"application/json"}}, bytes.NewReader(body), user)
+	return user, c.getParsedResponse("POST", "/admin/users", jsonHeader, bytes.NewReader(body), user)
 }
 
 type EditUserOption struct {
@@ -50,8 +48,7 @@ func (c *Client) AdminEditUser(user string, opt EditUserOption) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.getResponse("PATCH", fmt.Sprintf("/admin/users/%s", user),
-		http.Header{"content-type": []string{"application/json"}}, bytes.NewReader(body))
+	_, err = c.getResponse("PATCH", fmt.Sprintf("/admin/users/%s", user), jsonHeader, bytes.NewReader(body))
 	return err
 }
 
@@ -66,6 +63,5 @@ func (c *Client) AdminCreateUserPublicKey(user string, opt CreateKeyOption) (*Pu
 		return nil, err
 	}
 	key := new(PublicKey)
-	return key, c.getParsedResponse("POST", fmt.Sprintf("/admin/users/%s/keys", user),
-		http.Header{"content-type": []string{"application/json"}}, bytes.NewReader(body), key)
+	return key, c.getParsedResponse("POST", fmt.Sprintf("/admin/users/%s/keys", user), jsonHeader, bytes.NewReader(body), key)
 }
