@@ -74,50 +74,26 @@ type Payloader interface {
 	JSONPayload() ([]byte, error)
 }
 
-type PayloadAuthor struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	UserName string `json:"username"`
-}
-
-type PayloadCommitter struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	UserName string `json:"username"`
-}
-
 type PayloadUser struct {
-	UserName  string `json:"login"`
-	ID        int64  `json:"id"`
-	AvatarUrl string `json:"avatar_url"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	UserName string `json:"username"`
 }
 
+// FIXME: consider use same format as API when commits API are added.
 type PayloadCommit struct {
-	ID        string            `json:"id"`
-	Message   string            `json:"message"`
-	URL       string            `json:"url"`
-	Author    *PayloadAuthor    `json:"author"`
-	Committer *PayloadCommitter `json:"committer"`
-	Timestamp time.Time         `json:"timestamp"`
-}
-
-type PayloadRepo struct {
-	ID            int64          `json:"id"`
-	Name          string         `json:"name"`
-	URL           string         `json:"url"`
-	SSHURL        string         `json:"ssh_url"`
-	CloneURL      string         `json:"clone_url"`
-	Description   string         `json:"description"`
-	Website       string         `json:"website"`
-	Watchers      int            `json:"watchers"`
-	Owner         *PayloadAuthor `json:"owner"`
-	Private       bool           `json:"private"`
-	DefaultBranch string         `json:"default_branch"`
+	ID        string       `json:"id"`
+	Message   string       `json:"message"`
+	URL       string       `json:"url"`
+	Author    *PayloadUser `json:"author"`
+	Committer *PayloadUser `json:"committer"`
+	Timestamp time.Time    `json:"timestamp"`
 }
 
 var (
 	_ Payloader = &CreatePayload{}
 	_ Payloader = &PushPayload{}
+	_ Payloader = &PullRequestPayload{}
 )
 
 // _________                        __
@@ -128,11 +104,11 @@ var (
 //         \/             \/     \/          \/
 
 type CreatePayload struct {
-	Secret  string       `json:"secret"`
-	Ref     string       `json:"ref"`
-	RefType string       `json:"ref_type"`
-	Repo    *PayloadRepo `json:"repository"`
-	Sender  *PayloadUser `json:"sender"`
+	Secret  string      `json:"secret"`
+	Ref     string      `json:"ref"`
+	RefType string      `json:"ref_type"`
+	Repo    *Repository `json:"repository"`
+	Sender  *User       `json:"sender"`
 }
 
 func (p *CreatePayload) SetSecret(secret string) {
@@ -140,11 +116,7 @@ func (p *CreatePayload) SetSecret(secret string) {
 }
 
 func (p *CreatePayload) JSONPayload() ([]byte, error) {
-	data, err := json.MarshalIndent(p, "", "  ")
-	if err != nil {
-		return []byte{}, err
-	}
-	return data, nil
+	return json.MarshalIndent(p, "", "  ")
 }
 
 // ParseCreateHook parses create event hook content.
@@ -180,11 +152,11 @@ type PushPayload struct {
 	Ref        string           `json:"ref"`
 	Before     string           `json:"before"`
 	After      string           `json:"after"`
-	CompareUrl string           `json:"compare_url"`
+	CompareURL string           `json:"compare_url"`
 	Commits    []*PayloadCommit `json:"commits"`
-	Repo       *PayloadRepo     `json:"repository"`
-	Pusher     *PayloadAuthor   `json:"pusher"`
-	Sender     *PayloadUser     `json:"sender"`
+	Repo       *Repository      `json:"repository"`
+	Pusher     *User            `json:"pusher"`
+	Sender     *User            `json:"sender"`
 }
 
 func (p *PushPayload) SetSecret(secret string) {
@@ -192,11 +164,7 @@ func (p *PushPayload) SetSecret(secret string) {
 }
 
 func (p *PushPayload) JSONPayload() ([]byte, error) {
-	data, err := json.MarshalIndent(p, "", "  ")
-	if err != nil {
-		return []byte{}, err
-	}
-	return data, nil
+	return json.MarshalIndent(p, "", "  ")
 }
 
 // ParsePushHook parses push event hook content.
@@ -218,4 +186,60 @@ func ParsePushHook(raw []byte) (*PushPayload, error) {
 // Branch returns branch name from a payload
 func (p *PushPayload) Branch() string {
 	return strings.Replace(p.Ref, "refs/heads/", "", -1)
+}
+
+// .___
+// |   | ______ ________ __   ____
+// |   |/  ___//  ___/  |  \_/ __ \
+// |   |\___ \ \___ \|  |  /\  ___/
+// |___/____  >____  >____/  \___  >
+//          \/     \/            \/
+
+type HookIssueAction string
+
+const (
+	HOOK_ISSUE_OPENED        HookIssueAction = "opened"
+	HOOK_ISSUE_CLOSED        HookIssueAction = "closed"
+	HOOK_ISSUE_REOPENED      HookIssueAction = "reopened"
+	HOOK_ISSUE_EDITED        HookIssueAction = "edited"
+	HOOK_ISSUE_ASSIGNED      HookIssueAction = "assigned"
+	HOOK_ISSUE_UNASSIGNED    HookIssueAction = "unassigned"
+	HOOK_ISSUE_LABEL_UPDATED HookIssueAction = "label_updated"
+	HOOK_ISSUE_LABEL_CLEARED HookIssueAction = "label_cleared"
+	HOOK_ISSUE_SYNCHRONIZED  HookIssueAction = "synchronized"
+)
+
+type ChangesFromPayload struct {
+	From string `json:"from"`
+}
+
+type ChangesPayload struct {
+	Title *ChangesFromPayload `json:"title,omitempty"`
+	Body  *ChangesFromPayload `json:"body,omitempty"`
+}
+
+// __________      .__  .__    __________                                     __
+// \______   \__ __|  | |  |   \______   \ ____  ________ __   ____   _______/  |_
+//  |     ___/  |  \  | |  |    |       _// __ \/ ____/  |  \_/ __ \ /  ___/\   __\
+//  |    |   |  |  /  |_|  |__  |    |   \  ___< <_|  |  |  /\  ___/ \___ \  |  |
+//  |____|   |____/|____/____/  |____|_  /\___  >__   |____/  \___  >____  > |__|
+//                                     \/     \/   |__|           \/     \/
+
+// PullRequestPayload represents a payload information of pull request event.
+type PullRequestPayload struct {
+	Secret      string          `json:"secret"`
+	Action      HookIssueAction `json:"action"`
+	Index       int64           `json:"number"`
+	Changes     *ChangesPayload `json:"changes,omitempty"`
+	PullRequest *PullRequest    `json:"pull_request"`
+	Repository  *Repository     `json:"repository"`
+	Sender      *User           `json:"sender"`
+}
+
+func (p *PullRequestPayload) SetSecret(secret string) {
+	p.Secret = secret
+}
+
+func (p *PullRequestPayload) JSONPayload() ([]byte, error) {
+	return json.MarshalIndent(p, "", "  ")
 }
